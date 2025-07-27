@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Car Racing Game</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #222; overflow: hidden; font-family: sans-serif; }
+    #gameArea {
+      width: 400px;
+      height: 600px;
+      margin: 20px auto;
+      background: #555;
+      position: relative;
+      overflow: hidden;
+      border: 3px solid white;
+    }
+    .car {
+      width: 50px;
+      height: 100px;
+      background: red;
+      position: absolute;
+      bottom: 20px;
+      left: 175px;
+      border-radius: 10px;
+    }
+    .enemy {
+      width: 50px;
+      height: 100px;
+      background: yellow;
+      position: absolute;
+      top: -100px;
+      left: 0;
+      border-radius: 10px;
+    }
+    .roadLine {
+      width: 10px;
+      height: 80px;
+      background: white;
+      position: absolute;
+      top: 0;
+      left: 195px;
+    }
+    h2 {
+      text-align: center;
+      color: white;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Score: <span id="score">0</span></h2>
+
+  <div id="gameArea">
+    <div class="car" id="playerCar"></div>
+  </div>
+
+  <script>
+    const gameArea = document.getElementById("gameArea");
+    const playerCar = document.getElementById("playerCar");
+    const scoreElement = document.getElementById("score");
+
+    let keys = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+    let player = { speed: 5, x: 175, y: 500 };
+    let score = 0;
+    let gameRunning = true;
+
+    document.addEventListener("keydown", (e) => keys[e.key] = true);
+    document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+    function moveLines() {
+      let lines = document.querySelectorAll(".roadLine");
+      lines.forEach(line => {
+        let top = parseInt(line.style.top);
+        if (top >= 600) {
+          top = -80;
+        }
+        line.style.top = (top + player.speed) + "px";
+      });
+    }
+
+    function moveEnemy(enemy) {
+      let top = parseInt(enemy.style.top);
+      if (top >= 600) {
+        top = -100;
+        enemy.style.left = Math.floor(Math.random() * 350) + "px";
+      }
+      enemy.style.top = (top + player.speed) + "px";
+    }
+
+    function isCollide(a, b) {
+      let aRect = a.getBoundingClientRect();
+      let bRect = b.getBoundingClientRect();
+      return !(
+        aRect.bottom < bRect.top ||
+        aRect.top > bRect.bottom ||
+        aRect.right < bRect.left ||
+        aRect.left > bRect.right
+      );
+    }
+
+    function startGame() {
+      // Add road lines
+      for (let i = 0; i < 5; i++) {
+        let line = document.createElement("div");
+        line.classList.add("roadLine");
+        line.style.top = (i * 150) + "px";
+        gameArea.appendChild(line);
+      }
+
+      // Add enemies
+      for (let i = 0; i < 3; i++) {
+        let enemy = document.createElement("div");
+        enemy.classList.add("enemy");
+        enemy.style.top = (i * -200) + "px";
+        enemy.style.left = Math.floor(Math.random() * 350) + "px";
+        gameArea.appendChild(enemy);
+      }
+
+      window.requestAnimationFrame(playGame);
+    }
+
+    function playGame() {
+      if (!gameRunning) return;
+
+      moveLines();
+
+      let enemies = document.querySelectorAll(".enemy");
+      enemies.forEach(enemy => {
+        if (isCollide(playerCar, enemy)) {
+          gameRunning = false;
+          alert("Game Over! Your score: " + score);
+          window.location.reload();
+        }
+        moveEnemy(enemy);
+      });
+
+      if (keys.ArrowLeft && player.x > 0) player.x -= player.speed;
+      if (keys.ArrowRight && player.x < 350) player.x += player.speed;
+      if (keys.ArrowUp && player.y > 0) player.y -= player.speed;
+      if (keys.ArrowDown && player.y < 500) player.y += player.speed;
+
+      playerCar.style.left = player.x + "px";
+      playerCar.style.top = player.y + "px";
+
+      score++;
+      scoreElement.innerText = score;
+
+      window.requestAnimationFrame(playGame);
+    }
+
+    startGame();
+  </script>
+</body>
+</html>
