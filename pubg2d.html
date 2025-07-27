@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PUBG-Style 2D Shooter - Salman Gaming</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #111; }
+    canvas { display: block; margin: auto; background: #333; border: 2px solid #00ff88; }
+    #hud {
+      position: absolute; top: 10px; left: 10px; color: white;
+      background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="hud">
+    Health: <span id="health">100</span><br>
+    Enemies Left: <span id="enemiesLeft">0</span>
+  </div>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    const player = {
+      x: 400, y: 300, size: 20, speed: 3,
+      health: 100,
+    };
+
+    let bullets = [];
+    let enemies = [];
+    let keys = {};
+
+    const mapSize = 2000;
+
+    function spawnEnemy() {
+      return {
+        x: Math.random() * mapSize,
+        y: Math.random() * mapSize,
+        size: 20,
+        speed: 1.5,
+        alive: true
+      };
+    }
+
+    for (let i = 0; i < 10; i++) enemies.push(spawnEnemy());
+
+    function drawPlayer(x, y) {
+      ctx.fillStyle = "lime";
+      ctx.fillRect(x - player.size / 2, y - player.size / 2, player.size, player.size);
+    }
+
+    function drawEnemy(enemy, offsetX, offsetY) {
+      if (!enemy.alive) return;
+      ctx.fillStyle = "red";
+      ctx.fillRect(enemy.x - offsetX, enemy.y - offsetY, enemy.size, enemy.size);
+    }
+
+    function drawBullet(bullet, offsetX, offsetY) {
+      ctx.fillStyle = "yellow";
+      ctx.fillRect(bullet.x - offsetX, bullet.y - offsetY, 5, 5);
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Map scroll offset
+      const offsetX = player.x - canvas.width / 2;
+      const offsetY = player.y - canvas.height / 2;
+
+      // Move
+      if (keys["w"]) player.y -= player.speed;
+      if (keys["s"]) player.y += player.speed;
+      if (keys["a"]) player.x -= player.speed;
+      if (keys["d"]) player.x += player.speed;
+
+      // Constrain to map
+      player.x = Math.max(0, Math.min(mapSize, player.x));
+      player.y = Math.max(0, Math.min(mapSize, player.y));
+
+      drawPlayer(canvas.width / 2, canvas.height / 2);
+
+      bullets.forEach((b, i) => {
+        b.x += b.dx * 5;
+        b.y += b.dy * 5;
+        drawBullet(b, offsetX, offsetY);
+
+        // Bullet collision with enemies
+        enemies.forEach(e => {
+          if (e.alive && Math.abs(b.x - e.x) < 15 && Math.abs(b.y - e.y) < 15) {
+            e.alive = false;
+            bullets.splice(i, 1);
+          }
+        });
+      });
+
+      // Draw and move enemies
+      enemies.forEach(e => {
+        if (!e.alive) return;
+        const dx = player.x - e.x;
+        const dy = player.y - e.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > 5) {
+          e.x += (dx / dist) * e.speed;
+          e.y += (dy / dist) * e.speed;
+        }
+
+        // If enemy touches player
+        if (Math.abs(player.x - e.x) < 20 && Math.abs(player.y - e.y) < 20) {
+          player.health -= 0.5;
+        }
+        drawEnemy(e, offsetX, offsetY);
+      });
+
+      // HUD update
+      document.getElementById("health").textContent = Math.max(0, Math.floor(player.health));
+      document.getElementById("enemiesLeft").textContent = enemies.filter(e => e.alive).length;
+
+      if (player.health <= 0) {
+        ctx.fillStyle = "white";
+        ctx.font = "50px sans-serif";
+        ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
+        return;
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+    document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+    // Mouse click to shoot
+    canvas.addEventListener("click", e => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const angle = Math.atan2(my - canvas.height / 2, mx - canvas.width / 2);
+      bullets.push({
+        x: player.x,
+        y: player.y,
+        dx: Math.cos(angle),
+        dy: Math.sin(angle)
+      });
+    });
+
+    gameLoop();
+  </script>
+</body>
+</html>
